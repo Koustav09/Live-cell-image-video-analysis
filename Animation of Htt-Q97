@@ -1,0 +1,64 @@
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+from IPython.display import HTML
+
+frames = []
+video_path = '/Users/koustav/Desktop/221130_Q97 wt 5Y_2min intervall_SIM_Subset5.avi'
+video = cv2.VideoCapture(video_path)
+while True:
+    ret, frame = video.read()
+    if not ret:
+        break
+    frames.append(frame)
+video.release()
+
+# threshold for distinguishing between soluble and aggregate intensity
+threshold = 50  
+
+# frame processing
+processed_frames = []
+for frame in frames:
+    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    codes = np.zeros_like(gray_frame)
+    for i in range(gray_frame.shape[0]):
+        for j in range(gray_frame.shape[1]):
+            intensity = gray_frame[i, j]
+            codes[i, j] = 0 if intensity < threshold else 1
+    corrected_frame = frame.copy()
+
+    # small balls for soluble GFP molecules
+    soluble_indices = np.where(codes == 0)
+    num_soluble_balls = len(soluble_indices[0])
+    ball_size = 2 
+    for idx in range(num_soluble_balls):
+        i, j = soluble_indices[0][idx], soluble_indices[1][idx]
+        cv2.circle(corrected_frame, (j, i), ball_size, (0, 255, 0), -1)
+
+    processed_frames.append(corrected_frame)
+
+
+# figure and axis for the animation
+fig, ax = plt.subplots()
+# Create a list to store the frame indices
+frame_indices = list(range(len(processed_frames)))
+
+# the time interval between frames (in seconds)
+time_interval = 0.2  
+
+# Function to update the frame in the animation
+def update_frame(frame_index):
+    frame = processed_frames[frame_index]
+
+    ax.clear()
+    ax.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    ax.axis('off')
+
+# Create the animation
+animation = FuncAnimation(fig, update_frame, frames=frame_indices, interval=int(time_interval * 1000))
+
+# Display the animation
+plt.close()
+HTML(animation.to_jshtml())
+
